@@ -6,7 +6,7 @@
                    Intel Galileo board toggles a virtual LED setted up in LV.
  * Version       : 01.00
  * Revision      : 00
- * Last modified : 12/27/2020
+ * Last modified : 12/30/2020
  * -----------------------------------------------------------------------------
  */
 
@@ -18,7 +18,10 @@
 #define BAUD_RATE 9600
 
 // LED status
-int LED_pin = 0x00;
+int LED_stat = 0x00;
+
+// On-board LED pin
+int LED_pin = 13;
 
 //----------------------------------------------------------------------------//
 //                              Local functions                               //
@@ -37,16 +40,18 @@ int LED_pin = 0x00;
 //----------------------------------------------------------------------------//
 
 /**
-@brief  Serial port configuration
-@note   Additional information
+@brief  Serial port and LED pin configuration
 */
 void setup()
 {
-  // Sets serial port baud rate
+  // Serial port configuration (9600 bps, 8 data bits, 1 stop bit, no parity)
   Serial.begin(BAUD_RATE);
   
   // Waits for serial port to connect
   while (!Serial) {}
+  
+  // Initializes the digital pin as an output.
+  pinMode(LED_pin, OUTPUT); 
 }
 
 //----------------------------------------------------------------------------//
@@ -60,18 +65,23 @@ void setup()
 void loop()
 {
   // Toggles virtual LED status
-  if(LED_pin == 0x00)
+  if(LED_stat == 0x00)
   {
-    LED_pin = 0x01;
+    // Turn the LED on (HIGH is the voltage level)
+    LED_stat = 0x01;
+    digitalWrite(LED_pin, HIGH);
   }
   else
   {
-    LED_pin = 0x00;
+    // Turn the LED off by making the voltage LOW
+    LED_stat = 0x00;
+    digitalWrite(LED_pin, LOW);
   }
   
-  delay(1000);
+  // Waits 100 ms
+  delay(100);
   
   // Write status through serial port
-  Serial.print(LED_pin, HEX);
+  Serial.print(LED_stat, HEX);
 }
 
