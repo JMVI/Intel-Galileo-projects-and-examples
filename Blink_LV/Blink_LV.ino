@@ -4,9 +4,10 @@
  * Filename      : Blink_LV.ino
  * Description   : Blink sketch emulation using Intel Galileo and LabVIEW. The
                    Intel Galileo board toggles a virtual LED setted up in LV.
+                   Version with simulation control.
  * Version       : 02.00
  * Revision      : 00
- * Last modified : 12/30/2020
+ * Last modified : 12/31/2020
  * -----------------------------------------------------------------------------
  */
 
@@ -19,6 +20,7 @@
 // ASCII bytes
 #define STX 0x02
 #define ETX 0x03
+#define ACK 0x06
 
 // Command header
 #define SIM_CONTROL 'X'   // Simulation control (Start / Stop)
@@ -94,6 +96,9 @@ void serialEvent()
     // Gets a new byte
     Rx_byte = (char)Serial.read();
     
+    // Debug line
+    Serial.print(Rx_byte);
+    
     switch(Buffer_status)
     {
       case BUFFER_FREE:
@@ -124,8 +129,11 @@ void serialEvent()
         
       case BUFFER_READY:
       
-        // There is a new data to process
+        // There is new data to process
         new_data = true;
+        
+        // Sends acknoledge
+        Serial.print(ACK, HEX);
         
         // Frees buffer
         Buffer_status = BUFFER_FREE;
@@ -145,7 +153,7 @@ void buffer_parsing()
   char cmd_type = Buffer_In[0];  // Type of command
   
   // Deletes type of command
-  Buffer_In.erase(0,1);
+  Buffer_In = Buffer_In.substring(1);
   
   if(cmd_type == SIM_CONTROL)
   {
@@ -177,6 +185,8 @@ void buffer_parsing()
 
 /**
 @brief  Serial port and LED pin configuration. Reservation for Rx buffer.
+@param none
+@retval none
 */
 void setup()
 {
@@ -198,38 +208,40 @@ void setup()
 //----------------------------------------------------------------------------//
 
 /**
-@brief  Main program description
+@brief  Dynamic loop of simulation
 */
 void loop()
 {
-  while(!running_simulation)
+  serialEvent();
+  
+  // Parsing of data if available
+  if(new_data == true)
   {
-    // Parse data if available
-    if(new_data == true)
+    buffer_parsing();
+  }
+  
+  if(running_simulation == true)
+  {
+    // Toggles virtual LED status
+    if(LED_stat == 0x00)
     {
-      buffer_parsing();
+      // Turn the LED on (HIGH is the voltage level)
+      LED_stat = 0x01;
+      digitalWrite(LED_pin, HIGH);
     }
-  }
+    else
+    {
+      // Turn the LED off by making the voltage LOW
+      LED_stat = 0x00;
+      digitalWrite(LED_pin, LOW);
+    }
   
-  // Toggles virtual LED status
-  if(LED_stat == 0x00)
-  {
-    // Turn the LED on (HIGH is the voltage level)
-    LED_stat = 0x01;
-    digitalWrite(LED_pin, HIGH);
+    // Waits 100 ms
+    delay(100);
+    
+    // Write status through serial port
+    Serial.print(LED_stat, HEX);
   }
-  else
-  {
-    // Turn the LED off by making the voltage LOW
-    LED_stat = 0x00;
-    digitalWrite(LED_pin, LOW);
-  }
-  
-  // Waits 100 ms
-  delay(100);
-  
-  // Write status through serial port
-  Serial.print(LED_stat, HEX);
   
   // End simulation?
   if(end_simulation == true)
