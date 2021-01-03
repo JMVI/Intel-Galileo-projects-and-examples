@@ -90,7 +90,6 @@ boolean end_simulation = false;
 @param none
 @retval none
 */
-
 void serialEvent()
 {
   char Rx_byte;  // Received byte
@@ -135,7 +134,7 @@ void serialEvent()
     {
       // Frees buffer
       Buffer_status = BUFFER_FREE;
-      
+
       // Sends acknoledge
       Serial.write(ACK);
       
@@ -276,6 +275,7 @@ void setup()
 */
 void loop()
 {
+  // Reads data from serial port if available
   serialEvent();
   
   // Parsing of data if available
