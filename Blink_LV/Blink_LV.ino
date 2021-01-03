@@ -7,7 +7,7 @@
                    Version with simulation control.
  * Version       : 02.00
  * Revision      : 00
- * Last modified : 12/31/2020
+ * Last modified : 01/03/2021
  * -----------------------------------------------------------------------------
  */
 
@@ -33,6 +33,9 @@
 
 // Start simulation dynamic cycle
 #define START_SEQUENCE "START"
+
+// Reset simulation and parameters 
+#define RESET_SEQUENCE "RESET"
 
 // Stop simulation dynamic cycle
 #define STOP_SEQUENCE "STOP"
@@ -80,6 +83,8 @@ boolean end_simulation = false;
 //                              Local functions                               //
 //----------------------------------------------------------------------------//
 
+/********************* Serial communication management ************************/
+
 /**
 @brief Serial event. Processes received frame
 @param none
@@ -95,9 +100,6 @@ void serialEvent()
   {
     // Gets a new byte
     Rx_byte = (char)Serial.read();
-    
-    // Debug line
-    Serial.print(Rx_byte);
     
     switch(Buffer_status)
     {
@@ -126,19 +128,19 @@ void serialEvent()
         }
         
         break;
-        
-      case BUFFER_READY:
+    }
+    
+    // Resets states machine if buffer is ready to process
+    if(Buffer_status == BUFFER_READY)
+    {
+      // Frees buffer
+      Buffer_status = BUFFER_FREE;
       
-        // There is new data to process
-        new_data = true;
-        
-        // Sends acknoledge
-        Serial.print(ACK, HEX);
-        
-        // Frees buffer
-        Buffer_status = BUFFER_FREE;
-        
-        break;
+      // Sends acknoledge
+      Serial.write(ACK);
+      
+      // There is new data to process
+      new_data = true;
     }
   }
 }
@@ -161,13 +163,17 @@ void buffer_parsing()
     if(Buffer_In == START_SEQUENCE)
     {
       // Runs simulation
-      running_simulation = true;
+      run_simulation();
+    }
+    else if(Buffer_In == RESET_SEQUENCE)
+    {
+      // Resets simulation
+      reset_simulation();
     }
     else if(Buffer_In == STOP_SEQUENCE)
     {
       // Stops simulation
-      running_simulation = false;
-      end_simulation = true;
+      stop_simulation();
     }
   }
   
@@ -179,6 +185,64 @@ void buffer_parsing()
   byte_count = 0;
 }
 
+/**************************** Simulation control ******************************/
+
+/**
+@brief Runs simulation and performs additional tasks if needed
+@param none
+@retval none
+*/
+void run_simulation()
+{
+  // Enables simulation execution flag
+  running_simulation = true;
+}
+
+/**
+@brief Resets simulation to default parameters when Reset control 
+       line is received
+@param none
+@retval none
+*/
+void reset_simulation()
+{
+  // Disables simulation execution flag
+  running_simulation = false;
+  
+  /*************** Simulation parameters ***************/
+  
+  // Resets virtual LED status
+  LED_stat = 0x00;
+  
+  // Turn on-board LED off
+  digitalWrite(LED_pin, LOW);
+  
+  /*****************************************************/
+}
+
+/**
+@brief Runs simulation and performs additional tasks if needed
+@param none
+@retval none
+*/
+void stop_simulation()
+{
+  // Disables simulation execution flag
+  running_simulation = false;
+  
+  // End of execution
+  end_simulation = true;
+  
+  /*************** Simulation parameters ***************/
+  
+  // Resets virtual LED status
+  LED_stat = 0x00;
+  
+  // Turn on-board LED off
+  digitalWrite(LED_pin, LOW);
+  
+  /*****************************************************/
+}
 //----------------------------------------------------------------------------//
 //                                Sketch setup                                //
 //----------------------------------------------------------------------------//
@@ -235,7 +299,7 @@ void loop()
       LED_stat = 0x00;
       digitalWrite(LED_pin, LOW);
     }
-  
+    
     // Waits 100 ms
     delay(100);
     
